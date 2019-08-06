@@ -54,7 +54,7 @@ public class McGitVersion implements Plugin<Project> {
     private String getGitBranch(Grgit git) {
         String branch = git.getBranch().current().getName();
         if (branch.equals("HEAD")) {
-            return firstNonEmpty(
+            branch = firstNonEmpty(
                     () -> new RuntimeException("Found HEAD branch! This is most likely caused by detached head state! Will assume unknown version!"),
                     System.getenv("TRAVIS_BRANCH"),
                     System.getenv("GIT_BRANCH"),
