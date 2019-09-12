@@ -58,7 +58,8 @@ public class McGitVersion implements Plugin<Project> {
                     () -> new RuntimeException("Found HEAD branch! This is most likely caused by detached head state! Will assume unknown version!"),
                     System.getenv("TRAVIS_BRANCH"),
                     System.getenv("GIT_BRANCH"),
-                    System.getenv("BRANCH_NAME")
+                    System.getenv("BRANCH_NAME"),
+                    System.getenv("GITHUB_HEAD_REF")
             );
         }
 
