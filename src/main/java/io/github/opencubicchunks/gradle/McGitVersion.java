@@ -3,9 +3,12 @@ package io.github.opencubicchunks.gradle;
 import net.minecraftforge.gradle.user.patcherUser.forge.ForgeExtension;
 import org.ajoberstar.grgit.Grgit;
 import org.ajoberstar.grgit.operation.DescribeOp;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -35,15 +38,30 @@ public class McGitVersion implements Plugin<Project> {
             throw new IllegalStateException("Accessing project version before mcGitVersion is configured! Configure mcGitVersion first!");
         }
         try {
-            Grgit git = Grgit.open(openOp -> openOp.setDir(target.getProjectDir()));
+            Grgit git = openRepository(target.getProjectDir().toPath());
             String describe = new DescribeOp(git.getRepository()).call();
             String branch = getGitBranch(git);
             String snapshotSuffix = extension.isSnapshot() ? "-SNAPSHOT" : "";
             return getModVersion(target, extension, describe, branch, maven) + snapshotSuffix;
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | RepositoryNotFoundException ex) {
             target.getLogger().error("Unknown error when accessing git repository! Are you sure the git repository exists?", ex);
             return String.format("%s-%s.%s.%s%s%s", getMcVersion(target), "9999", "9999", "9999", "", "NOVERSION");
         }
+    }
+
+    private Grgit openRepository(Path path) throws RepositoryNotFoundException {
+        while (path.getParent() != null) {
+            try {
+                // this allows javac to accept catching that exception (thrown by GrGit.open, but not declared with "throws")
+                //noinspection ConstantConditions
+                if (false) throw new RepositoryNotFoundException((File) null);
+                Path pathFinal = path;
+                return Grgit.open(openOp -> openOp.setDir(pathFinal));
+            } catch (RepositoryNotFoundException ignored) {
+                path = path.getParent();
+            }
+        }
+        throw new RepositoryNotFoundException(path.toFile());
     }
 
     private String getMcVersion(Project target) {
