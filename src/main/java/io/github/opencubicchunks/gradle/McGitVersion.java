@@ -20,12 +20,12 @@ public class McGitVersion implements Plugin<Project> {
         extension.configured = true;
         target.setVersion(lazyString(() -> {
             String version = getVersion(extension, target, false);
-            target.getLogger().lifecycle("Auto-detected version {}", version);
+            target.getLogger().lifecycle("Auto-detected version {} for project(\"{}\")", version, target.getPath());
             return version;
         }));
         target.getExtensions().getExtraProperties().set("mavenProjectVersion", lazyString(() -> {
             String version = getVersion(extension, target, true);
-            target.getLogger().lifecycle("Auto-detected version for maven {}", version);
+            target.getLogger().lifecycle("Auto-detected version for maven {} for project(\"{}\")", version, target.getPath());
             return version;
         }));
     }
@@ -39,6 +39,7 @@ public class McGitVersion implements Plugin<Project> {
         }
         try {
             Grgit git = openRepository(target.getProjectDir().toPath());
+            target.getLogger().info("Found git repository " + git.getRepository().getRootDir() + " for project " + target);
             String describe = new DescribeOp(git.getRepository()).call();
             String branch = getGitBranch(git);
             String snapshotSuffix = extension.isSnapshot() ? "-SNAPSHOT" : "";
