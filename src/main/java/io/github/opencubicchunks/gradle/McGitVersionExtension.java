@@ -6,6 +6,15 @@ public class McGitVersionExtension {
     private Boolean snapshot;
     private String versionSuffix = "";
     private String forceVersionString;
+    private String forgeVersion;
+
+    public void setForgeVersion(String forgeVersion) {
+        this.forgeVersion = forgeVersion;
+    }
+
+    public String getForgeVersion() {
+        return this.forgeVersion;
+    }
 
     public boolean isSnapshot() {
         return snapshot;

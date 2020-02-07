@@ -1,6 +1,6 @@
 package io.github.opencubicchunks.gradle;
 
-import net.minecraftforge.gradle.user.patcherUser.forge.ForgeExtension;
+
 import org.ajoberstar.grgit.Grgit;
 import org.ajoberstar.grgit.operation.DescribeOp;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
@@ -46,7 +46,7 @@ public class McGitVersion implements Plugin<Project> {
             return getModVersion(target, extension, describe, branch, maven) + snapshotSuffix;
         } catch (RuntimeException | RepositoryNotFoundException ex) {
             target.getLogger().error("Unknown error when accessing git repository! Are you sure the git repository exists?", ex);
-            return String.format("%s-%s.%s.%s%s%s", getMcVersion(target), "9999", "9999", "9999", "", "NOVERSION");
+            return String.format("%s-%s.%s.%s%s%s", getMcVersion(extension), "9999", "9999", "9999", "", "NOVERSION");
         }
     }
 
@@ -65,9 +65,8 @@ public class McGitVersion implements Plugin<Project> {
         throw new RepositoryNotFoundException(path.toFile());
     }
 
-    private String getMcVersion(Project target) {
-        ForgeExtension minecraft = target.getExtensions().getByType(ForgeExtension.class);
-        return minecraft.getVersion().split("-")[0];
+    private String getMcVersion(McGitVersionExtension ext) {
+        return ext.getForgeVersion().split("-")[0];
     }
 
     private String getGitBranch(Grgit git) {
@@ -90,7 +89,7 @@ public class McGitVersion implements Plugin<Project> {
 
 
     private String getModVersion(Project target, McGitVersionExtension extension, String describe, String branch, boolean mvn) {
-        String mcVersion = getMcVersion(target);
+        String mcVersion = getMcVersion(extension);
         if (branch.startsWith("MC_")) {
             String branchMcVersion = branch.substring("MC_".length());
             if (!mcVersion.startsWith(branchMcVersion)) {

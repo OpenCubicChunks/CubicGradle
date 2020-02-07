@@ -12,7 +12,6 @@ repositories {
 }
 
 dependencies {
-    compile "net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT"
     compile "net.minecraftforge:remapper:0.1:fatjar"
     compile "org.ajoberstar.grgit:grgit-core:3.1.1"
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
