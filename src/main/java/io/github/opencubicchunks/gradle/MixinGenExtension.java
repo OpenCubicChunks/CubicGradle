@@ -161,6 +161,7 @@ import java.util.function.Function;
     }
 
     void generateFiles(JavaPluginConvention convention) throws IOException {
+        convention.getProject().getLogger().lifecycle("Generating mixin configuration files");
         SourceSet main = convention.getSourceSets().getByName("main");
         Set<File> resourcesSet = main.getResources().getSrcDirs();
         Path resources = resourcesSet.iterator().next().getCanonicalFile().toPath();
