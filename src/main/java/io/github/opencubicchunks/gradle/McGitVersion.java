@@ -118,7 +118,7 @@ public class McGitVersion implements Plugin<Project> {
         String branch;
         Ref head = git.getRepository().exactRef(Constants.HEAD);
         if (head.isSymbolic()) {
-            branch = head.getName();
+            branch = head.getTarget().getName();
         } else {
             branch = firstNonEmpty(
                     () -> new RuntimeException("Found unknown branch! This is most likely caused by detached head state! Will assume unknown version!"),
@@ -126,7 +126,7 @@ public class McGitVersion implements Plugin<Project> {
                     System.getenv("GIT_BRANCH"),
                     System.getenv("BRANCH_NAME"),
                     System.getenv("GITHUB_HEAD_REF"),
-                    head.getName()
+                    head.getTarget().getName()
             );
         }
         if (branch.startsWith("origin/")) {
