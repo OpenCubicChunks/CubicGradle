@@ -1,11 +1,25 @@
 package io.github.opencubicchunks.gradle;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 public class McGitVersionExtension {
 
     boolean configured;
     private Boolean snapshot;
     private String versionSuffix = "";
     private String forceVersionString;
+
+    private final Map<String, String> commitVersions = new HashMap<>();
+
+    public void setCommitVersion(String commit, String version) {
+        this.commitVersions.put(commit, version);
+    }
+
+    public Map<String, String> getCommitVersions() {
+        return Collections.unmodifiableMap(commitVersions);
+    }
 
     public boolean isSnapshot() {
         return snapshot;
