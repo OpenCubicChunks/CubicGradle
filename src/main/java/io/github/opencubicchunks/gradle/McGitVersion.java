@@ -1,23 +1,21 @@
 package io.github.opencubicchunks.gradle;
 
 import net.minecraftforge.gradle.user.patcherUser.forge.ForgeExtension;
-import org.ajoberstar.grgit.Grgit;
-import org.ajoberstar.grgit.operation.DescribeOp;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 public class McGitVersion implements Plugin<Project> {
 
@@ -117,17 +115,20 @@ public class McGitVersion implements Plugin<Project> {
     }
 
     private String getGitBranch(Git git) throws IOException {
-        String branch = git.getRepository().getBranch();
-        if (branch.equals("HEAD")) {
+        String branch;
+        Ref head = git.getRepository().exactRef(Constants.HEAD);
+        if (head.isSymbolic()) {
+            branch = head.getName();
+        } else {
             branch = firstNonEmpty(
-                    () -> new RuntimeException("Found HEAD branch! This is most likely caused by detached head state! Will assume unknown version!"),
+                    () -> new RuntimeException("Found unknown branch! This is most likely caused by detached head state! Will assume unknown version!"),
                     System.getenv("TRAVIS_BRANCH"),
                     System.getenv("GIT_BRANCH"),
                     System.getenv("BRANCH_NAME"),
-                    System.getenv("GITHUB_HEAD_REF")
+                    System.getenv("GITHUB_HEAD_REF"),
+                    head.getName()
             );
         }
-
         if (branch.startsWith("origin/")) {
             branch = branch.substring("origin/".length());
         }
