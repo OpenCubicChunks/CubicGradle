@@ -1,16 +1,18 @@
 package io.github.opencubicchunks.gradle;
 
-
-import org.ajoberstar.grgit.Grgit;
-import org.ajoberstar.grgit.operation.DescribeOp;
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
-import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 public class McGitVersion implements Plugin<Project> {
 
@@ -38,28 +40,67 @@ public class McGitVersion implements Plugin<Project> {
             throw new IllegalStateException("Accessing project version before mcGitVersion is configured! Configure mcGitVersion first!");
         }
         try {
-            Grgit git = openRepository(target.getProjectDir().toPath());
-            target.getLogger().info("Found git repository " + git.getRepository().getRootDir() + " for project " + target);
-            String describe = new DescribeOp(git.getRepository()).call();
+            Git git = openRepository(target.getProjectDir().toPath());
+            target.getLogger().info("Found git repository " + git.getRepository().getDirectory() + " for project " + target);
+            GitVersionInfo describe = manualDescribe(target, git, extension.getCommitVersions());
             String branch = getGitBranch(git);
             String snapshotSuffix = extension.isSnapshot() ? "-SNAPSHOT" : "";
             return getModVersion(target, extension, describe, branch, maven) + snapshotSuffix;
-        } catch (RuntimeException | RepositoryNotFoundException ex) {
+        } catch (RuntimeException | IOException ex) {
             target.getLogger().error("Unknown error when accessing git repository! Are you sure the git repository exists?", ex);
             return String.format("%s-%s.%s.%s%s%s", getMcVersion(extension), "9999", "9999", "9999", "", "NOVERSION");
         }
     }
 
-    private Grgit openRepository(Path path) throws RepositoryNotFoundException {
+    private GitVersionInfo manualDescribe(Project project, Git git, Map<String, String> commitVersions) throws IOException {
+        Repository repository = git.getRepository();
+        int shortest = Integer.MAX_VALUE;
+        String shortestVersion = null;
+        String shortestCommit = null;
+        commitVersionLoop:
+        for (Map.Entry<String, String> entry : commitVersions.entrySet()) {
+            String commit = entry.getKey();
+            String version = entry.getValue();
+            project.getLogger().lifecycle("Finding version string: attempting base version " + version);
+            RevWalk revWalk = new RevWalk(repository);
+            RevCommit oldCommit = revWalk.parseCommit(repository.resolve(commit));
+            RevCommit current = revWalk.parseCommit(repository.resolve("HEAD"));
+            revWalk.markStart(current);
+            revWalk.markUninteresting(oldCommit);
+            revWalk.setRetainBody(false);
+            int commitCount = 0;
+            for (RevCommit revCommit : revWalk) {
+                if (revCommit.getParentCount() == 0 && !revCommit.equals(oldCommit)) {
+                    project.getLogger().info("Reached the end of commit tree for version " + version);
+                    revWalk.close();
+                    continue commitVersionLoop;
+                }
+                commitCount++;
+            }
+            if (commitCount < shortest) {
+                shortest = commitCount;
+                shortestVersion = version;
+                shortestCommit = commit;
+            } else if (commitCount == shortest) {
+                project.getLogger().warn("Potentially ambiguous version detection: The same amount of commits since " +
+                        commit + "(version=" + version + ") as since " + shortestCommit + " (version=" + shortestVersion + ")");
+            }
+            revWalk.close();
+        }
+        if (shortestVersion == null) {
+            throw new RuntimeException("No version for current commit!");
+        }
+        return new GitVersionInfo(shortestVersion, shortest);
+    }
+
+    private Git openRepository(Path path) throws RepositoryNotFoundException {
         while (path.getParent() != null) {
             try {
-                // this allows javac to accept catching that exception (thrown by GrGit.open, but not declared with "throws")
-                //noinspection ConstantConditions
-                if (false) throw new RepositoryNotFoundException((File) null);
-                Path pathFinal = path;
-                return Grgit.open(openOp -> openOp.setDir(pathFinal));
+                return Git.open(path.toFile());
             } catch (RepositoryNotFoundException ignored) {
                 path = path.getParent();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
         }
         throw new RepositoryNotFoundException(path.toFile());
@@ -69,8 +110,8 @@ public class McGitVersion implements Plugin<Project> {
         return ext.getForgeVersion().split("-")[0];
     }
 
-    private String getGitBranch(Grgit git) {
-        String branch = git.getBranch().current().getName();
+    private String getGitBranch(Git git) throws IOException {
+        String branch = git.getRepository().getBranch();
         if (branch.equals("HEAD")) {
             branch = firstNonEmpty(
                     () -> new RuntimeException("Found HEAD branch! This is most likely caused by detached head state! Will assume unknown version!"),
@@ -88,7 +129,7 @@ public class McGitVersion implements Plugin<Project> {
     }
 
 
-    private String getModVersion(Project target, McGitVersionExtension extension, String describe, String branch, boolean mvn) {
+    private String getModVersion(Project target, McGitVersionExtension extension, GitVersionInfo describe, String branch, boolean mvn) {
         String mcVersion = getMcVersion(extension);
         if (branch.startsWith("MC_")) {
             String branchMcVersion = branch.substring("MC_".length());
@@ -98,36 +139,15 @@ public class McGitVersion implements Plugin<Project> {
             }
         }
 
-        //branches "master" and "MC_something" are not appended to version sreing, everything else is
+        //branches "master" and "MC_something" are not appended to version string, everything else is
         //only builds from "master" and "MC_version" branches will actually use the correct versioning
         //but it allows to distinguish between builds from different branches even if version number is the same
-        String branchSuffix = (branch.equals("master") || branch.startsWith("MC_")) ? "" : ("-" + branch.replaceAll("[^a-zA-Z0-9.-]", "_"));
-
-        Pattern baseVersionRegex = Pattern.compile("v[0-9]+\\.[0-9]+");
+        String branchSuffix = (branch.equals("master") || branch.startsWith("MC_")) ? "" :
+                ("-" + branch.replaceAll("[^a-zA-Z0-9.-]", "_"));
         String versionSuffix = extension.getVersionSuffix();
-        String unknownVersion = String.format("%s-UNKNOWN_VERSION%s%s", mcVersion, versionSuffix, branchSuffix);
-        if (!describe.contains("-")) {
-            //is it the "vX.Y" format?
-            if (baseVersionRegex.matcher(describe).matches()) {
-                return mvn ? String.format("%s-%s", mcVersion, describe) :
-                        String.format("%s-%s.0.0%s%s", mcVersion, describe, versionSuffix, branchSuffix);
-            }
-            target.getLogger().error("Git describe information: " + describe + " in unknown/incorrect format");
-            return unknownVersion;
-        }
-        //Describe format: vX.Y-build-hash
-        String[] parts = describe.split("-");
-        if (!baseVersionRegex.matcher(parts[0]).matches()) {
-            target.getLogger().error("Git describe information: " + describe + " in unknown/incorrect format");
-            return unknownVersion;
-        }
-        if (!parts[1].matches("[0-9]+")) {
-            target.getLogger().error("Git describe information: " + describe + " in unknown/incorrect format");
-            return unknownVersion;
-        }
-        String modAndApiVersion = parts[0].substring(1);
+        String modAndApiVersion = describe.baseVersion;
 
-        int minor = Integer.parseInt(parts[1]);
+        int minor = describe.commitsSinceBase;
         int patch = 0;
 
         return (mvn) ? String.format("%s-%s%s", mcVersion, modAndApiVersion, versionSuffix)
@@ -154,5 +174,15 @@ public class McGitVersion implements Plugin<Project> {
                 return cached;
             }
         };
+    }
+
+    private static class GitVersionInfo {
+        String baseVersion;
+        int commitsSinceBase;
+
+        public GitVersionInfo(String baseVersion, int commitsSinceBase) {
+            this.baseVersion = baseVersion;
+            this.commitsSinceBase = commitsSinceBase;
+        }
     }
 }
