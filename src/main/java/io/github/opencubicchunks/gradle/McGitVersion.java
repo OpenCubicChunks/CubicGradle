@@ -131,6 +131,8 @@ public class McGitVersion implements Plugin<Project> {
         }
         if (branch.startsWith("origin/")) {
             branch = branch.substring("origin/".length());
+        } else if (branch.startsWith("refs/heads/")) {
+            branch = branch.substring("refs/heads/".length());
         }
         return branch;
     }
