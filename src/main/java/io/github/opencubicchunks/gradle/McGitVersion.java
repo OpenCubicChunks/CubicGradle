@@ -125,7 +125,7 @@ public class McGitVersion implements Plugin<Project> {
                     System.getenv("TRAVIS_BRANCH"),
                     System.getenv("GIT_BRANCH"),
                     System.getenv("BRANCH_NAME"),
-                    System.getenv("GITHUB_HEAD_REF"),
+                    System.getenv("GITHUB_REF"),
                     Repository.shortenRefName(head.getTarget().getName())
             );
         }
