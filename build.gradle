@@ -6,7 +6,7 @@ apply plugin: 'java'
 repositories {
     mavenCentral()
     maven {
-        setUrl("http://files.minecraftforge.net/maven")
+        setUrl("https://maven.minecraftforge.net")
     }
 }
 
