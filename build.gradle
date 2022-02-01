@@ -5,13 +5,9 @@ apply plugin: 'java'
 
 repositories {
     mavenCentral()
-    maven {
-        setUrl("https://maven.minecraftforge.net")
-    }
 }
 
 dependencies {
-    implementation("net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT")
     // https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit
     implementation group: 'org.eclipse.jgit', name: 'org.eclipse.jgit', version: '5.11.0.202103091610-r'
     // https://mvnrepository.com/artifact/com.google.code.gson/gson

@@ -6,7 +6,7 @@ import static org.apache.tools.ant.util.StringUtils.removeSuffix;
 import com.google.gson.stream.JsonWriter;
 import org.gradle.api.Action;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSet;
 
 import java.io.File;
@@ -160,8 +160,8 @@ import java.util.function.Function;
         }
     }
 
-    void generateFiles(JavaPluginConvention convention) throws IOException {
-        SourceSet main = convention.getSourceSets().getByName("main");
+    void generateFiles(JavaPluginExtension javaExt) throws IOException {
+        SourceSet main = javaExt.getSourceSets().getByName("main");
         Set<File> resourcesSet = main.getResources().getSrcDirs();
         Path resources = resourcesSet.iterator().next().getCanonicalFile().toPath();
         for (String name : configs.keySet()) {
@@ -214,7 +214,7 @@ import java.util.function.Function;
                     writer.name("conformVisibility").value(config.conformVisibility);
                     writer.endObject();
                 }
-                writeMixins(convention, name, config, writer);
+                writeMixins(javaExt, name, config, writer);
 
                 writer.endObject();
             }
@@ -222,8 +222,8 @@ import java.util.function.Function;
 
     }
 
-    private void writeMixins(JavaPluginConvention convention, String name, MixinConfig config, JsonWriter writer) throws IOException {
-        Set<Path> classes = getMixinClasses(config, convention.getSourceSets().getByName("main").getAllJava());
+    private void writeMixins(JavaPluginExtension javaExt, String name, MixinConfig config, JsonWriter writer) throws IOException {
+        Set<Path> classes = getMixinClasses(config, javaExt.getSourceSets().getByName("main").getAllJava());
 
         Set<Path> commonSet = new HashSet<>();
         Set<Path> clientSet = new HashSet<>();

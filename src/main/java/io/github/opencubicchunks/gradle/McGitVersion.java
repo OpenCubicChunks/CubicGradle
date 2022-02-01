@@ -1,6 +1,5 @@
 package io.github.opencubicchunks.gradle;
 
-import net.minecraftforge.gradle.user.patcherUser.forge.ForgeExtension;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.lib.Constants;
@@ -110,8 +109,9 @@ public class McGitVersion implements Plugin<Project> {
     }
 
     private String getMcVersion(Project target) {
-        ForgeExtension minecraft = target.getExtensions().getByType(ForgeExtension.class);
-        return minecraft.getVersion().split("-")[0];
+        //ForgeExtension minecraft = target.getExtensions().getByType(ForgeExtension.class);
+        //return minecraft.getVersion().split("-")[0];
+        return "1.12.2";
     }
 
     private String getGitBranch(Git git) throws IOException {

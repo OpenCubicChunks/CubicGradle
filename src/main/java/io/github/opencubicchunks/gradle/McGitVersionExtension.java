@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class McGitVersionExtension {
-
     boolean configured;
     private Boolean snapshot;
     private String versionSuffix = "";
